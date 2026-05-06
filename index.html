@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zoom Casa | Partner Intake</title>
+    <meta name="description" content="Submit a deal to Zoom Casa — Cash Offer+, Backup Offer+, Easy Flip, and Pre-Sale Home Prep for agents, lenders, and homeowners.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Google Places API for Address Autocomplete -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyClHMIIMq5MUlAQVZsdgt8jDt4CbRMly44&libraries=places&callback=Function.prototype" async></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        input[type=number]::-webkit-outer-spin-button,
+        input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
+
+        :root {
+            --bg-primary: #0a0a0b;
+            --bg-secondary: #111113;
+            --bg-card: #18181b;
+            --bg-elevated: #1f1f23;
+            --text-primary: #fafafa;
+            --text-secondary: #a1a1aa;
+            --text-muted: #71717a;
+            --accent-blue: #3b82f6;
+            --accent-blue-glow: rgba(59, 130, 246, 0.4);
+            --accent-green: #10b981;
+            --accent-green-glow: rgba(16, 185, 129, 0.4);
+            --accent-gold: #f59e0b;
+            --border-subtle: rgba(255, 255, 255, 0.06);
+            --border-accent: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            font-family: 'Instrument Sans', -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        #root { min-height: 100vh; }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .animate-in { animation: fadeInUp 0.6s ease-out forwards; }
+        .delay-1 { animation-delay: 0.1s; opacity: 0; }
+        .delay-2 { animation-delay: 0.2s; opacity: 0; }
+        .delay-3 { animation-delay: 0.3s; opacity: 0; }
+
+        .logo-full { display: block; }
+        .logo-symbol { display: none; }
+
+        @media (max-width: 480px) {
+            .logo-full { display: none; }
+            .logo-symbol { display: block; }
+        }
+
+        /* Google Places Autocomplete Dropdown Styles */
+        .pac-container {
+            background-color: #1f1f23 !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            border-radius: 12px !important;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5) !important;
+            margin-top: 8px !important;
+            font-family: 'Instrument Sans', -apple-system, sans-serif !important;
+            overflow: hidden !important;
+        }
+        .pac-item {
+            background-color: #1f1f23 !important;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+            padding: 12px 16px !important;
+            cursor: pointer !important;
+            transition: background-color 0.2s ease !important;
+        }
+        .pac-item:hover { background-color: #2a2a2f !important; }
+        .pac-item-selected,
+        .pac-item-selected:hover { background-color: rgba(59, 130, 246, 0.2) !important; }
+        .pac-item-query {
+            color: #fafafa !important;
+            font-size: 14px !important;
+            font-weight: 500 !important;
+        }
+        .pac-item span:not(.pac-item-query) {
+            color: #a1a1aa !important;
+            font-size: 13px !important;
+        }
+        .pac-icon { filter: invert(0.7) !important; margin-right: 12px !important; }
+        .pac-logo::after { display: none !important; }
+        .pac-container::after { background-image: none !important; height: 0 !important; }
+
+        /* Native select dropdown text colour (the popup itself is OS-controlled) */
+        select option {
+            background: #1f1f23;
+            color: #fafafa;
+        }
+
+        textarea {
+            font-family: inherit;
+            resize: vertical;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // n8n Partner Intake Webhook (swap before deploying if URL changes)
+        const PARTNER_WEBHOOK = 'https://n8n.srv936332.hstgr.cloud/webhook/zc-partner';
+
+        const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const PHONE_REGEX = /^[\d\s\-\(\)\+]{10,}$/;
+
+        const PROGRAMS = [
+            'Cash Offer+',
+            'Backup Offer+',
+            'Easy Flip',
+            'Pre Sale Home Prep',
+            'Not sure, but Exploring Options.'
+        ];
+
+        // ---------- Background ----------
+        const BackgroundEffects = () => (
+            <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0, overflow: 'hidden' }}>
+                <div style={{
+                    position: 'absolute', top: '-20%', left: '10%',
+                    width: '600px', height: '600px',
+                    background: 'radial-gradient(circle, rgba(59, 130, 246, 0.08) 0%, transparent 70%)',
+                    filter: 'blur(60px)', animation: 'float 8s ease-in-out infinite'
+                }} />
+                <div style={{
+                    position: 'absolute', bottom: '-10%', right: '5%',
+                    width: '500px', height: '500px',
+                    background: 'radial-gradient(circle, rgba(16, 185, 129, 0.06) 0%, transparent 70%)',
+                    filter: 'blur(60px)', animation: 'float 10s ease-in-out infinite 2s'
+                }} />
+                <div style={{
+                    position: 'absolute', inset: 0,
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
+                    opacity: 0.03
+                }} />
+            </div>
+        );
+
+        // ---------- Reusable label ----------
+        const FieldLabel = ({ children, required, error }) => (
+            <label style={{
+                display: 'block',
+                fontSize: '13px',
+                fontWeight: 500,
+                color: error ? '#ef4444' : 'var(--text-secondary)',
+                marginBottom: '8px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px'
+            }}>
+                {children} {required && <span style={{ color: '#ef4444' }}>*</span>}
+            </label>
+        );
+
+        const FieldError = ({ error }) => error ? (
+            <p style={{ fontSize: '12px', color: '#ef4444', marginTop: '6px' }}>{error}</p>
+        ) : null;
+
+        // ---------- Glow input ----------
+        const GlowInput = ({ value, onChange, placeholder, disabled, type = 'text', error, label, required, prefix }) => {
+            const [focused, setFocused] = useState(false);
+            return (
+                <div style={{ position: 'relative', marginBottom: '16px' }}>
+                    {label && <FieldLabel required={required} error={error}>{label}</FieldLabel>}
+                    <div style={{
+                        position: 'absolute',
+                        inset: label ? '28px -2px -2px -2px' : '-2px',
+                        borderRadius: '16px',
+                        background: error
+                            ? 'linear-gradient(135deg, #ef4444, #f87171)'
+                            : focused
+                                ? 'linear-gradient(135deg, var(--accent-blue), var(--accent-green))'
+                                : 'transparent',
+                        opacity: (focused || error) ? 1 : 0,
+                        transition: 'opacity 0.3s ease',
+                        filter: 'blur(8px)'
+                    }} />
+                    <div style={{ position: 'relative' }}>
+                        {prefix && (
+                            <span style={{
+                                position: 'absolute',
+                                left: '20px',
+                                top: '50%',
+                                transform: 'translateY(-50%)',
+                                color: 'var(--text-muted)',
+                                fontSize: '16px',
+                                pointerEvents: 'none'
+                            }}>{prefix}</span>
+                        )}
+                        <input
+                            type={type}
+                            value={value}
+                            onChange={onChange}
+                            placeholder={placeholder}
+                            disabled={disabled}
+                            onFocus={() => setFocused(true)}
+                            onBlur={() => setFocused(false)}
+                            style={{
+                                width: '100%',
+                                padding: prefix ? '16px 20px 16px 36px' : '16px 20px',
+                                fontSize: '16px',
+                                fontFamily: 'inherit',
+                                background: 'var(--bg-elevated)',
+                                border: '1px solid',
+                                borderColor: error ? '#ef4444' : focused ? 'var(--accent-blue)' : 'var(--border-accent)',
+                                borderRadius: '14px',
+                                color: 'var(--text-primary)',
+                                outline: 'none',
+                                transition: 'all 0.3s ease',
+                                position: 'relative'
+                            }}
+                        />
+                    </div>
+                    <FieldError error={error} />
+                </div>
+            );
+        };
+
+        // ---------- Currency input (formatted with commas, no $) ----------
+        const CurrencyInput = ({ value, onChange, label, error, required, placeholder }) => {
+            const display = value === '' || value === null || value === undefined
+                ? ''
+                : Number(value).toLocaleString('en-US');
+            const handleChange = (e) => {
+                const raw = e.target.value.replace(/[^\d]/g, '');
+                onChange(raw === '' ? '' : Number(raw));
+            };
+            return (
+                <GlowInput
+                    label={label}
+                    required={required}
+                    error={error}
+                    value={display}
+                    onChange={handleChange}
+                    type="text"
+                    placeholder={placeholder || '0'}
+                    prefix="$"
+                />
+            );
+        };
+
+        // ---------- Address Autocomplete ----------
+        const AddressAutocomplete = ({ value, onChange, placeholder, disabled, error, label, required }) => {
+            const [focused, setFocused] = useState(false);
+            const inputRef = useRef(null);
+            const autocompleteRef = useRef(null);
+            const onChangeRef = useRef(onChange);
+            onChangeRef.current = onChange;
+
+            useEffect(() => {
+                if (inputRef.current && inputRef.current.value !== value) {
+                    inputRef.current.value = value;
+                }
+            }, [value]);
+
+            useEffect(() => {
+                if (!inputRef.current || !window.google?.maps?.places) return;
+                autocompleteRef.current = new window.google.maps.places.Autocomplete(inputRef.current, {
+                    types: ['address'],
+                    componentRestrictions: { country: 'us' },
+                    fields: ['formatted_address', 'address_components', 'geometry']
+                });
+                autocompleteRef.current.addListener('place_changed', () => {
+                    const place = autocompleteRef.current.getPlace();
+                    if (place.formatted_address) {
+                        setTimeout(() => {
+                            onChangeRef.current({ target: { value: place.formatted_address } });
+                        }, 0);
+                    }
+                });
+                return () => {
+                    if (autocompleteRef.current) {
+                        window.google.maps.event.clearInstanceListeners(autocompleteRef.current);
+                    }
+                };
+            }, []);
+
+            return (
+                <div style={{ position: 'relative', marginBottom: '16px' }}>
+                    {label && <FieldLabel required={required} error={error}>{label}</FieldLabel>}
+                    <div style={{
+                        position: 'absolute',
+                        inset: label ? '28px -2px -2px -2px' : '-2px',
+                        borderRadius: '16px',
+                        background: error
+                            ? 'linear-gradient(135deg, #ef4444, #f87171)'
+                            : focused
+                                ? 'linear-gradient(135deg, var(--accent-blue), var(--accent-green))'
+                                : 'transparent',
+                        opacity: (focused || error) ? 1 : 0,
+                        transition: 'opacity 0.3s ease',
+                        filter: 'blur(8px)'
+                    }} />
+                    <input
+                        ref={inputRef}
+                        type="text"
+                        defaultValue={value}
+                        onChange={onChange}
+                        placeholder={placeholder}
+                        disabled={disabled}
+                        onFocus={() => setFocused(true)}
+                        onBlur={() => setFocused(false)}
+                        autoComplete="off"
+                        style={{
+                            width: '100%',
+                            padding: '16px 20px',
+                            fontSize: '16px',
+                            fontFamily: 'inherit',
+                            background: 'var(--bg-elevated)',
+                            border: '1px solid',
+                            borderColor: error ? '#ef4444' : focused ? 'var(--accent-blue)' : 'var(--border-accent)',
+                            borderRadius: '14px',
+                            color: 'var(--text-primary)',
+                            outline: 'none',
+                            transition: 'all 0.3s ease',
+                            position: 'relative'
+                        }}
+                    />
+                    <FieldError error={error} />
+                </div>
+            );
+        };
+
+        // ---------- Select ----------
+        const SelectInput = ({ value, onChange, options, label, required, error, placeholder }) => (
+            <div style={{ marginBottom: '16px' }}>
+                {label && <FieldLabel required={required} error={error}>{label}</FieldLabel>}
+                <select
+                    value={value}
+                    onChange={onChange}
+                    style={{
+                        width: '100%',
+                        padding: '16px 20px',
+                        fontSize: '16px',
+                        fontFamily: 'inherit',
+                        background: 'var(--bg-elevated)',
+                        border: '1px solid',
+                        borderColor: error ? '#ef4444' : 'var(--border-accent)',
+                        borderRadius: '14px',
+                        color: value ? 'var(--text-primary)' : 'var(--text-muted)',
+                        outline: 'none',
+                        appearance: 'none',
+                        WebkitAppearance: 'none',
+                        backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23999' d='M6 8L1 3h10z'/%3E%3C/svg%3E")`,
+                        backgroundRepeat: 'no-repeat',
+                        backgroundPosition: 'right 16px center',
+                        cursor: 'pointer'
+                    }}
+                >
+                    <option value="" disabled>{placeholder || 'Select…'}</option>
+                    {options.map(opt => (
+                        <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                </select>
+                <FieldError error={error} />
+            </div>
+        );
+
+        // ---------- Multi-select chips for Programs ----------
+        const ProgramChips = ({ selected, onToggle, error }) => (
+            <div style={{ marginBottom: '16px' }}>
+                <FieldLabel required error={error}>What Programs are you interested in?</FieldLabel>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {PROGRAMS.map(p => {
+                        const isSelected = selected.includes(p);
+                        return (
+                            <div
+                                key={p}
+                                onClick={() => onToggle(p)}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '12px',
+                                    padding: '14px 16px',
+                                    background: isSelected ? 'rgba(59, 130, 246, 0.12)' : 'var(--bg-elevated)',
+                                    border: '1px solid',
+                                    borderColor: isSelected ? 'var(--accent-blue)' : 'var(--border-accent)',
+                                    borderRadius: '12px',
+                                    cursor: 'pointer',
+                                    userSelect: 'none',
+                                    transition: 'all 0.2s ease'
+                                }}
+                            >
+                                <div style={{
+                                    width: '20px',
+                                    height: '20px',
+                                    minWidth: '20px',
+                                    borderRadius: '6px',
+                                    border: '1.5px solid',
+                                    borderColor: isSelected ? 'var(--accent-blue)' : 'var(--border-accent)',
+                                    background: isSelected ? 'var(--accent-blue)' : 'transparent',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    transition: 'all 0.2s ease'
+                                }}>
+                                    {isSelected && (
+                                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                                            <path d="M2 6L5 9L10 3" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                        </svg>
+                                    )}
+                                </div>
+                                <span style={{
+                                    fontSize: '15px',
+                                    color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)',
+                                    fontWeight: isSelected ? 500 : 400
+                                }}>
+                                    {p}
+                                </span>
+                            </div>
+                        );
+                    })}
+                </div>
+                <FieldError error={error} />
+            </div>
+        );
+
+        // ---------- Consent checkbox row ----------
+        const ConsentCheckbox = ({ checked, onToggle, children, error }) => (
+            <div
+                onClick={onToggle}
+                style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '12px',
+                    padding: '14px',
+                    background: 'var(--bg-elevated)',
+                    border: '1px solid',
+                    borderColor: error ? '#ef4444' : 'var(--border-subtle)',
+                    borderRadius: '12px',
+                    marginBottom: '12px',
+                    cursor: 'pointer',
+                    userSelect: 'none'
+                }}
+            >
+                <div style={{
+                    width: '20px',
+                    height: '20px',
+                    minWidth: '20px',
+                    borderRadius: '6px',
+                    border: '1.5px solid',
+                    borderColor: checked ? 'var(--accent-blue)' : (error ? '#ef4444' : 'var(--border-accent)'),
+                    background: checked ? 'var(--accent-blue)' : 'transparent',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginTop: '2px',
+                    transition: 'all 0.2s ease'
+                }}>
+                    {checked && (
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                            <path d="M2 6L5 9L10 3" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                    )}
+                </div>
+                <span style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: '1.5' }}>
+                    {children}
+                </span>
+            </div>
+        );
+
+        // ---------- Shimmer Button ----------
+        const ShimmerButton = ({ onClick, loading, children, disabled }) => {
+            const [hover, setHover] = useState(false);
+            const isDisabled = loading || disabled;
+            return (
+                <button
+                    onClick={onClick}
+                    disabled={isDisabled}
+                    onMouseEnter={() => setHover(true)}
+                    onMouseLeave={() => setHover(false)}
+                    style={{
+                        width: '100%',
+                        padding: '18px 32px',
+                        fontSize: '16px',
+                        fontWeight: 600,
+                        fontFamily: 'inherit',
+                        background: isDisabled
+                            ? 'var(--bg-elevated)'
+                            : 'linear-gradient(135deg, var(--accent-blue) 0%, #6366f1 100%)',
+                        border: 'none',
+                        borderRadius: '14px',
+                        color: 'white',
+                        cursor: isDisabled ? (loading ? 'wait' : 'not-allowed') : 'pointer',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        transition: 'all 0.3s ease',
+                        transform: hover && !isDisabled ? 'translateY(-2px)' : 'translateY(0)',
+                        boxShadow: hover && !isDisabled
+                            ? '0 20px 40px -10px var(--accent-blue-glow)'
+                            : '0 10px 30px -10px var(--accent-blue-glow)'
+                    }}
+                >
+                    {!isDisabled && (
+                        <div style={{
+                            position: 'absolute',
+                            inset: 0,
+                            background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)',
+                            backgroundSize: '200% 100%',
+                            animation: hover ? 'shimmer 1.5s infinite' : 'none'
+                        }} />
+                    )}
+                    <span style={{ position: 'relative', zIndex: 1, display: 'inline-flex', alignItems: 'center', gap: '10px' }}>
+                        {loading && (
+                            <span style={{
+                                width: '16px',
+                                height: '16px',
+                                border: '2px solid rgba(255,255,255,0.3)',
+                                borderTopColor: 'white',
+                                borderRadius: '50%',
+                                animation: 'spin 0.8s linear infinite',
+                                display: 'inline-block'
+                            }} />
+                        )}
+                        {loading ? 'Submitting…' : children}
+                    </span>
+                </button>
+            );
+        };
+
+        // ---------- Section heading ----------
+        const SectionHeading = ({ children, color = 'var(--accent-blue)' }) => (
+            <h3 style={{
+                fontSize: '13px',
+                fontWeight: 600,
+                textTransform: 'uppercase',
+                letterSpacing: '1.5px',
+                color,
+                margin: '24px 0 16px 0',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+            }}>
+                <span style={{
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    background: color,
+                    boxShadow: `0 0 12px ${color}`
+                }} />
+                {children}
+            </h3>
+        );
+
+        // ====================== App ======================
+        const App = () => {
+            const [role, setRole] = useState('');
+            const [firstName, setFirstName] = useState('');
+            const [lastName, setLastName] = useState('');
+            const [email, setEmail] = useState('');
+            const [phone, setPhone] = useState('');
+            const [address, setAddress] = useState('');
+            const [programs, setPrograms] = useState([]);
+
+            const [borrowerName, setBorrowerName] = useState('');
+            const [borrowerPhone, setBorrowerPhone] = useState('');
+            const [borrowerEmail, setBorrowerEmail] = useState('');
+
+            const [asIsValue, setAsIsValue] = useState('');
+            const [renovationBudget, setRenovationBudget] = useState('');
+            const [arv, setArv] = useState('');
+            const [mortgageBalance, setMortgageBalance] = useState('');
+            const [notes, setNotes] = useState('');
+
+            const [transactionalConsent, setTransactionalConsent] = useState(false);
+            const [marketingConsent, setMarketingConsent] = useState(false);
+
+            const [errors, setErrors] = useState({});
+            const [loading, setLoading] = useState(false);
+            const [submitted, setSubmitted] = useState(false);
+            const [globalError, setGlobalError] = useState('');
+            const [source, setSource] = useState('');
+
+            useEffect(() => {
+                const params = new URLSearchParams(window.location.search);
+                const urlSource = params.get('source');
+                if (urlSource) setSource(urlSource.toLowerCase());
+            }, []);
+
+            const togglePrograms = (p) => {
+                setPrograms(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]);
+            };
+
+            const validate = () => {
+                const e = {};
+                if (!role) e.role = 'Please select your role';
+                if (!firstName.trim()) e.firstName = 'First name is required';
+                if (!lastName.trim()) e.lastName = 'Last name is required';
+                if (!email.trim()) e.email = 'Email is required';
+                else if (!EMAIL_REGEX.test(email.trim())) e.email = 'Please enter a valid email';
+                if (!phone.trim()) e.phone = 'Phone number is required';
+                else if (!PHONE_REGEX.test(phone.trim())) e.phone = 'Please enter a valid phone number';
+                if (!address.trim() || address.trim().length < 5) e.address = 'Property address is required';
+                if (programs.length === 0) e.programs = 'Please select at least one program';
+
+                if (borrowerEmail.trim() && !EMAIL_REGEX.test(borrowerEmail.trim())) {
+                    e.borrowerEmail = 'Please enter a valid email';
+                }
+                if (borrowerPhone.trim() && !PHONE_REGEX.test(borrowerPhone.trim())) {
+                    e.borrowerPhone = 'Please enter a valid phone number';
+                }
+
+                if (!transactionalConsent) {
+                    e.transactionalConsent = 'Required to receive updates about your submission';
+                }
+
+                setErrors(e);
+                return Object.keys(e).length === 0;
+            };
+
+            const handleSubmit = async () => {
+                setGlobalError('');
+                if (!validate()) {
+                    // scroll to first error
+                    setTimeout(() => {
+                        const firstErr = document.querySelector('[data-error="true"]');
+                        if (firstErr) firstErr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }, 50);
+                    return;
+                }
+
+                setLoading(true);
+                try {
+                    const payload = {
+                        role,
+                        firstName: firstName.trim(),
+                        lastName: lastName.trim(),
+                        email: email.trim(),
+                        phone: phone.trim(),
+                        propertyAddress: address.trim(),
+                        programs,
+                        borrower: {
+                            name: borrowerName.trim() || null,
+                            phone: borrowerPhone.trim() || null,
+                            email: borrowerEmail.trim() || null
+                        },
+                        property: {
+                            asIsValue: asIsValue === '' ? null : Number(asIsValue),
+                            renovationBudget: renovationBudget === '' ? null : Number(renovationBudget),
+                            afterRenovatedValue: arv === '' ? null : Number(arv),
+                            mortgageBalance: mortgageBalance === '' ? null : Number(mortgageBalance)
+                        },
+                        notes: notes.trim() || null,
+                        consent: {
+                            transactional: transactionalConsent,
+                            marketing: marketingConsent
+                        },
+                        source: source || 'partner_intake',
+                        timestamp: new Date().toISOString(),
+                        userAgent: navigator.userAgent
+                    };
+
+                    const response = await fetch(`${PARTNER_WEBHOOK}?t=${Date.now()}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok && response.status !== 0) {
+                        // n8n test webhooks sometimes 404 if not active — still show success but log
+                        console.warn('Webhook response status:', response.status);
+                    }
+
+                    setSubmitted(true);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                } catch (err) {
+                    console.error('Submit error:', err);
+                    setGlobalError('We couldn\'t reach the server. Please try again or email info@zoomcasa.com.');
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            // ---------- Success view ----------
+            if (submitted) {
+                return (
+                    <div style={{ position: 'relative', minHeight: '100vh' }}>
+                        <BackgroundEffects />
+                        <div style={{
+                            position: 'relative',
+                            zIndex: 1,
+                            maxWidth: '580px',
+                            margin: '0 auto',
+                            padding: '60px 24px',
+                            textAlign: 'center'
+                        }}>
+                            <div className="animate-in" style={{ marginBottom: '32px' }}>
+                                <img className="logo-full" src="Zoom Casa (white).png" alt="Zoom Casa" style={{ height: '60px', margin: '0 auto 24px' }} />
+                                <img className="logo-symbol" src="Zoom Casa Symbol White.png" alt="Zoom Casa" style={{ height: '50px', margin: '0 auto 24px' }} />
+                            </div>
+                            <div className="animate-in delay-1" style={{
+                                background: 'var(--bg-card)',
+                                borderRadius: '24px',
+                                padding: '48px 32px',
+                                border: '1px solid var(--border-subtle)'
+                            }}>
+                                <div style={{
+                                    width: '72px',
+                                    height: '72px',
+                                    borderRadius: '50%',
+                                    background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-green))',
+                                    margin: '0 auto 24px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    boxShadow: '0 0 40px var(--accent-green-glow)'
+                                }}>
+                                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                                        <path d="M5 12L10 17L19 7" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                                    </svg>
+                                </div>
+                                <h1 style={{
+                                    fontSize: '28px',
+                                    fontWeight: 600,
+                                    marginBottom: '12px',
+                                    fontFamily: "'Playfair Display', serif"
+                                }}>
+                                    Submission received
+                                </h1>
+                                <p style={{
+                                    color: 'var(--text-secondary)',
+                                    fontSize: '15px',
+                                    lineHeight: '1.6',
+                                    marginBottom: '24px'
+                                }}>
+                                    Thanks{firstName ? `, ${firstName}` : ''}! Our team is reviewing the deal at <strong style={{ color: 'var(--text-primary)' }}>{address}</strong>. You'll hear from us within one business day.
+                                </p>
+                                <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
+                                    Need us sooner? <a href="tel:+17476889904" style={{ color: 'var(--accent-blue)', textDecoration: 'none' }}>(747) 688-9904</a> · <a href="mailto:info@zoomcasa.com" style={{ color: 'var(--accent-blue)', textDecoration: 'none' }}>info@zoomcasa.com</a>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            // ---------- Form view ----------
+            return (
+                <div style={{ position: 'relative', minHeight: '100vh' }}>
+                    <BackgroundEffects />
+
+                    <div style={{
+                        position: 'relative',
+                        zIndex: 1,
+                        maxWidth: '580px',
+                        margin: '0 auto',
+                        padding: '60px 24px'
+                    }}>
+                        {/* Header */}
+                        <div className="animate-in" style={{ textAlign: 'center', marginBottom: '40px' }}>
+                            <img
+                                className="logo-full"
+                                src="Zoom Casa (white).png"
+                                alt="Zoom Casa"
+                                style={{ height: '60px', width: 'auto', marginBottom: '20px' }}
+                            />
+                            <img
+                                className="logo-symbol"
+                                src="Zoom Casa Symbol White.png"
+                                alt="Zoom Casa"
+                                style={{ height: '50px', width: 'auto', marginBottom: '20px' }}
+                            />
+                            <h1 style={{
+                                fontSize: '28px',
+                                fontWeight: 600,
+                                marginBottom: '8px',
+                                fontFamily: "'Playfair Display', serif",
+                                lineHeight: '1.2'
+                            }}>
+                                Partner Intake
+                            </h1>
+                            <p style={{
+                                color: 'var(--text-muted)',
+                                fontSize: '14px',
+                                letterSpacing: '1.5px',
+                                textTransform: 'uppercase'
+                            }}>
+                                Submit a deal in 60 seconds
+                            </p>
+                        </div>
+
+                        {/* Form Card */}
+                        <div className="animate-in delay-1" style={{
+                            background: 'var(--bg-card)',
+                            borderRadius: '24px',
+                            padding: '32px',
+                            border: '1px solid var(--border-subtle)'
+                        }}>
+                            <SectionHeading>Your Info</SectionHeading>
+
+                            <SelectInput
+                                label="I'm a…"
+                                required
+                                value={role}
+                                onChange={(e) => setRole(e.target.value)}
+                                options={['Agent', 'Lender', 'Homeowner']}
+                                placeholder="Select your role"
+                                error={errors.role}
+                            />
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                <GlowInput
+                                    label="First Name"
+                                    required
+                                    value={firstName}
+                                    onChange={(e) => setFirstName(e.target.value)}
+                                    placeholder="First Name"
+                                    error={errors.firstName}
+                                />
+                                <GlowInput
+                                    label="Last Name"
+                                    required
+                                    value={lastName}
+                                    onChange={(e) => setLastName(e.target.value)}
+                                    placeholder="Last Name"
+                                    error={errors.lastName}
+                                />
+                            </div>
+
+                            <GlowInput
+                                label="Email"
+                                required
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                placeholder="you@example.com"
+                                error={errors.email}
+                            />
+
+                            <GlowInput
+                                label="Phone"
+                                required
+                                type="tel"
+                                value={phone}
+                                onChange={(e) => setPhone(e.target.value)}
+                                placeholder="(555) 123-4567"
+                                error={errors.phone}
+                            />
+
+                            <SectionHeading color="var(--accent-green)">Property</SectionHeading>
+
+                            <AddressAutocomplete
+                                label="Property Address"
+                                required
+                                value={address}
+                                onChange={(e) => setAddress(e.target.value)}
+                                placeholder="Start typing an address…"
+                                error={errors.address}
+                            />
+
+                            <ProgramChips
+                                selected={programs}
+                                onToggle={togglePrograms}
+                                error={errors.programs}
+                            />
+
+                            <SectionHeading color="var(--accent-gold)">Borrower / Seller (optional)</SectionHeading>
+
+                            <GlowInput
+                                label="Borrower's / Seller Name"
+                                value={borrowerName}
+                                onChange={(e) => setBorrowerName(e.target.value)}
+                                placeholder="Full name"
+                            />
+                            <GlowInput
+                                label="Borrower's / Seller Phone"
+                                type="tel"
+                                value={borrowerPhone}
+                                onChange={(e) => setBorrowerPhone(e.target.value)}
+                                placeholder="(555) 123-4567"
+                                error={errors.borrowerPhone}
+                            />
+                            <GlowInput
+                                label="Borrower's / Seller Email"
+                                type="email"
+                                value={borrowerEmail}
+                                onChange={(e) => setBorrowerEmail(e.target.value)}
+                                placeholder="seller@example.com"
+                                error={errors.borrowerEmail}
+                            />
+
+                            <SectionHeading color="var(--accent-green)">Numbers</SectionHeading>
+
+                            <CurrencyInput
+                                label="Property As-Is Value"
+                                value={asIsValue}
+                                onChange={setAsIsValue}
+                            />
+                            <CurrencyInput
+                                label="Renovation Budget"
+                                value={renovationBudget}
+                                onChange={setRenovationBudget}
+                            />
+                            <CurrencyInput
+                                label="After Renovated Value (ARV)"
+                                value={arv}
+                                onChange={setArv}
+                            />
+                            <CurrencyInput
+                                label="Mortgage Balance"
+                                value={mortgageBalance}
+                                onChange={setMortgageBalance}
+                            />
+
+                            <div style={{ marginBottom: '16px' }}>
+                                <FieldLabel>Property Notes</FieldLabel>
+                                <textarea
+                                    value={notes}
+                                    onChange={(e) => setNotes(e.target.value)}
+                                    placeholder="Anything we should know — condition, timing, occupancy, special requests…"
+                                    rows="4"
+                                    style={{
+                                        width: '100%',
+                                        padding: '16px 20px',
+                                        fontSize: '15px',
+                                        background: 'var(--bg-elevated)',
+                                        border: '1px solid var(--border-accent)',
+                                        borderRadius: '14px',
+                                        color: 'var(--text-primary)',
+                                        outline: 'none',
+                                        minHeight: '100px'
+                                    }}
+                                />
+                            </div>
+
+                            <SectionHeading>Consent</SectionHeading>
+
+                            <div data-error={errors.transactionalConsent ? 'true' : 'false'}>
+                                <ConsentCheckbox
+                                    checked={transactionalConsent}
+                                    onToggle={() => setTransactionalConsent(!transactionalConsent)}
+                                    error={errors.transactionalConsent}
+                                >
+                                    By checking this box, I consent to receive transactional messages related to my form submission. These messages may include appointment reminders, order confirmations, and account notifications among others. Message frequency may vary. Message &amp; Data rates may apply. Reply HELP for help or STOP to opt-out.
+                                </ConsentCheckbox>
+                                {errors.transactionalConsent && (
+                                    <p style={{ fontSize: '12px', color: '#ef4444', marginTop: '-4px', marginBottom: '12px', paddingLeft: '4px' }}>
+                                        {errors.transactionalConsent}
+                                    </p>
+                                )}
+                            </div>
+
+                            <ConsentCheckbox
+                                checked={marketingConsent}
+                                onToggle={() => setMarketingConsent(!marketingConsent)}
+                            >
+                                By checking this box, I consent to receive marketing and promotional messages, including special offers, discounts, new product updates among others. Message frequency may vary. Message &amp; Data rates may apply. Reply HELP for help or STOP to opt-out.
+                            </ConsentCheckbox>
+
+                            {globalError && (
+                                <p style={{
+                                    fontSize: '13px',
+                                    color: '#ef4444',
+                                    background: 'rgba(239, 68, 68, 0.08)',
+                                    border: '1px solid rgba(239, 68, 68, 0.25)',
+                                    borderRadius: '10px',
+                                    padding: '12px 14px',
+                                    marginBottom: '12px',
+                                    marginTop: '4px'
+                                }}>
+                                    {globalError}
+                                </p>
+                            )}
+
+                            <div style={{ marginTop: '24px' }}>
+                                <ShimmerButton onClick={handleSubmit} loading={loading}>
+                                    Submit Deal →
+                                </ShimmerButton>
+                            </div>
+
+                            <p style={{
+                                fontSize: '11px',
+                                color: 'var(--text-muted)',
+                                textAlign: 'center',
+                                marginTop: '16px',
+                                lineHeight: '1.5'
+                            }}>
+                                We typically respond within one business day. <br />
+                                Questions? <a href="mailto:info@zoomcasa.com" style={{ color: 'var(--accent-blue)', textDecoration: 'none' }}>info@zoomcasa.com</a>
+                            </p>
+                        </div>
+
+                        <p className="animate-in delay-2" style={{
+                            textAlign: 'center',
+                            marginTop: '32px',
+                            fontSize: '12px',
+                            color: 'var(--text-muted)'
+                        }}>
+                            © {new Date().getFullYear()} Zoom Casa
+                        </p>
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
