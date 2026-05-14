@@ -129,6 +129,8 @@
 
         // n8n Partner Intake Webhook (swap before deploying if URL changes)
         const PARTNER_WEBHOOK = 'https://n8n.srv936332.hstgr.cloud/webhook/zc-partner';
+        // LeadConnector / GHL webhook — fired in parallel with n8n on submit
+        const LEADCONNECTOR_WEBHOOK = 'https://services.leadconnectorhq.com/hooks/KHb9kYgOdPilgZLkB1dL/webhook-trigger/00266481-c484-4238-b50a-6b5b9391114f';
 
         const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         const PHONE_REGEX = /^[\d\s\-\(\)\+]{10,}$/;
@@ -677,16 +679,29 @@
                         userAgent: navigator.userAgent
                     };
 
-                    const response = await fetch(`${PARTNER_WEBHOOK}?t=${Date.now()}`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
+                    // Fire both webhooks in parallel — n8n for processing, LeadConnector for CRM intake.
+                    // Use Promise.allSettled so one failure doesn't block the success state.
+                    const results = await Promise.allSettled([
+                        fetch(`${PARTNER_WEBHOOK}?t=${Date.now()}`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        }),
+                        fetch(LEADCONNECTOR_WEBHOOK, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        })
+                    ]);
 
-                    if (!response.ok && response.status !== 0) {
-                        // n8n test webhooks sometimes 404 if not active — still show success but log
-                        console.warn('Webhook response status:', response.status);
-                    }
+                    results.forEach((r, i) => {
+                        const label = i === 0 ? 'n8n' : 'leadconnector';
+                        if (r.status === 'rejected') {
+                            console.warn(`${label} webhook failed:`, r.reason);
+                        } else if (!r.value.ok && r.value.status !== 0) {
+                            console.warn(`${label} webhook response status:`, r.value.status);
+                        }
+                    });
 
                     setSubmitted(true);
                     window.scrollTo({ top: 0, behavior: 'smooth' });
